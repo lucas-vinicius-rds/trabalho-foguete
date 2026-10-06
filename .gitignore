@@ -24,3 +24,11 @@ HANDOFF.md
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Empacotamento e entrega do executável
+.venv-build/
+build/
+dist/
+entrega/
+entrega-foguete.zip
+*.spec

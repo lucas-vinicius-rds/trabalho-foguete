@@ -7,6 +7,26 @@ foguete sob gravidade, com empuxo, inclinação e consumo de combustível.
 
 ## Como executar
 
+### Executável para Windows
+
+Para entregar ao professor, use `entrega-foguete.zip`. Extraia o ZIP e abra
+`entrega/JogoDeFoguete.exe` com dois cliques. O executável é para Windows de
+64 bits e já inclui Python e pygame; não é necessário instalar dependências.
+A pasta `entrega/codigo-fonte` contém os arquivos do projeto e os testes.
+
+Para gerar novamente o executável e o ZIP, execute no PowerShell, na pasta
+do projeto:
+
+```powershell
+.\gerar-executavel.ps1
+```
+
+O script instala as dependências de compilação de `requirements-build.txt`
+em `.venv-build`, executa os testes e usa PyInstaller para gerar
+`dist/JogoDeFoguete.exe`. A compilação requer Python e acesso à internet.
+
+### Código-fonte
+
 Você precisa do Git e do Python. O projeto foi testado no Windows com
 Python 3.14.7 e pygame-ce 2.5.8.
 

@@ -1,0 +1,36 @@
+JOGO DE FOGUETE - TRABALHO DE FÍSICA
+
+COMO JOGAR
+1. Extraia o ZIP antes de abrir o jogo.
+2. Abra JogoDeFoguete.exe com dois cliques.
+O executável é para Windows de 64 bits. Não precisa instalar Python,
+pygame ou qualquer outra dependência. O jogo abre em tela cheia.
+
+CONTROLES
+Espaço: propulsão.
+Setas esquerda/direita: inclinar o foguete.
+R: reiniciar a tentativa.
+Esc: sair.
+Objetivo: permanecer no ar pelo maior tempo possível.
+
+ARQUIVOS ENTREGUES
+JogoDeFoguete.exe: jogo completo, incluindo suas dependências.
+codigo-fonte/: arquivos Python, testes, dependências, instruções,
+imagens de demonstração e script para gerar o executável novamente.
+Os desenhos do jogo são gerados pelo próprio código; não há uma pasta
+de imagens ou sons externa necessária para executar o jogo.
+
+COMO EXECUTAR O CÓDIGO-FONTE
+Instale Python. Abra um terminal na pasta codigo-fonte e execute:
+  py -m pip install -r requirements.txt
+  py main.py
+
+TESTES
+Na pasta codigo-fonte:
+  py -m unittest -v
+
+COMO GERAR OUTRA ENTREGA
+Na pasta codigo-fonte, no PowerShell:
+  .\gerar-executavel.ps1
+A compilação precisa de Python e internet para instalar as dependências.
+Os detalhes da física e as simplificações estão em codigo-fonte/README.md.
