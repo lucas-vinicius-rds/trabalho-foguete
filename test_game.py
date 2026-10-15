@@ -9,8 +9,28 @@ from rocket import Rocket
 
 
 class PhysicsTests(unittest.TestCase):
+    def test_waiting_for_start_freezes_flight_and_restart_waits_again(self):
+        game = Game()
+        initial = vars(game.rocket).copy()
+        cells = game.fuel_cells[:]
+        for _ in range(120):
+            game.update(True, 1)
+        self.assertEqual(vars(game.rocket), initial)
+        self.assertEqual(game.fuel_cells, cells)
+        self.assertEqual((game.elapsed, game.best, game.collected), (0, 0, 0))
+        game.start()
+        game.update()
+        self.assertLess(game.rocket.y, initial['y'])
+        self.assertEqual(game.elapsed, DT)
+        game.restart()
+        game.update(True, 1)
+        self.assertFalse(game.started)
+        self.assertEqual(vars(game.rocket), initial)
+        self.assertEqual(game.elapsed, 0)
+
     def test_altitude_limit_finishes_flight_and_restart_clears_victory(self):
         game = Game()
+        game.start()
         game.rocket.y = MAX_ALTITUDE - 1
         game.rocket.vy = 120
         game.update(True)
@@ -80,6 +100,7 @@ class PhysicsTests(unittest.TestCase):
 
     def test_score_stops_and_record_survives_restart(self):
         game = Game()
+        game.start()
         game.rocket = Rocket(y=1)
         for _ in range(100):
             game.update()
@@ -95,6 +116,7 @@ class PhysicsTests(unittest.TestCase):
 
     def test_collect_refuels_once_and_changes_mass(self):
         game = Game()
+        game.start()
         game.fuel_cells = [(500, 1000)]
         game.rocket.x, game.rocket.y = game.fuel_cells[0]
         game.rocket.fuel = FUEL_MASS * 0.20
@@ -109,6 +131,7 @@ class PhysicsTests(unittest.TestCase):
 
     def test_collect_caps_tank_and_restart_restores_cells(self):
         game = Game()
+        game.start()
         game.rocket.x, game.rocket.y = game.fuel_cells[0]
         game.rocket.fuel = FUEL_MASS - 1
         game.update()
@@ -164,6 +187,7 @@ class PhysicsTests(unittest.TestCase):
 
     def test_larger_hitbox_collects_nearby_but_not_distant_cells(self):
         game = Game()
+        game.start()
         game.fuel_cells = [(FUEL_CELL_RADIUS - 1, 1000), (FUEL_CELL_RADIUS + 1, 1000)]
         game.update()
         self.assertEqual(game.collected, 1)
@@ -171,6 +195,7 @@ class PhysicsTests(unittest.TestCase):
 
     def test_collection_uses_distance_and_entire_frame_path(self):
         game = Game()
+        game.start()
         game.fuel_cells = [(300, 1000)]
         game.update()
         self.assertEqual(game.collected, 0)
@@ -181,6 +206,7 @@ class PhysicsTests(unittest.TestCase):
 
     def test_dead_rocket_cannot_collect(self):
         game = Game()
+        game.start()
         game.fuel_cells = [(0, 0)]
         game.rocket = Rocket(y=0.001)
         game.update()

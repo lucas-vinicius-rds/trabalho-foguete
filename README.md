@@ -44,8 +44,9 @@ do seu interpretador Python, como `python3`, nos comandos acima.
 
 ## Controles e objetivo
 
+O foguete fica parado até você pressionar uma tecla para começar.
 Segure **Espaço** para propulsionar e use **← / →** para inclinar o foguete.
-**R** inicia uma nova tentativa e **Esc** sai. O objetivo é alcançar **10.000 m**
+**R** reinicia e aguarda uma nova tecla; **Esc** sai. O objetivo é alcançar **10.000 m**
 sem cair, coletando combustível durante o caminho. Ao chegar a essa altitude, o voo termina
 com vitória e o cronômetro para. O recorde de tempo no ar é mantido na sessão.
 

@@ -36,6 +36,7 @@ class Game:
 
     def restart(self):
         self.rocket = Rocket()
+        self.started = False
         self.won = False
         self.frames = 0
         self.fuel_cells = []
@@ -75,8 +76,11 @@ class Game:
         floor = self.highest_y - WORLD_HEIGHT * 2
         self.fuel_cells = [(x, y) for x, y in self.fuel_cells if y >= floor]
 
+    def start(self):
+        self.started = True
+
     def update(self, thrusting=False, turn=0):
-        if self.rocket.alive and not self.won:
+        if self.started and self.rocket.alive and not self.won:
             old_x, old_y = self.rocket.x, self.rocket.y
             # Atualização com passo fixo Δt = 1/60 s
             self.rocket.update(DT, thrusting, turn)
@@ -232,6 +236,8 @@ class Renderer:
             pygame.draw.rect(self.screen, ACCENT if ratio > .2 else (255, 169, 77), (bar.x, bar.y, int(bar.width * ratio), bar.height), border_radius=4)
         self.label(f"Combustível: {ratio:.1%}  ({rocket.fuel / 1000:.1f} t)", x, bar.bottom + 5, MUTED, self.small)
         self.label("ESPAÇO: propulsão   |   ← →: inclinar   |   R: reiniciar   |   ESC: sair", self.sw // 2, self.sh - max(26, int(35 * self.ui)), TEXT, self.small, centered=True)
+        if not game.started:
+            self.label("Pressione qualquer tecla para começar", self.sw // 2, self.sh // 2, ACCENT, centered=True)
         if rocket.alive and not game.won and rocket.fuel == 0:
             self.label("Combustível esgotado", self.sw // 2, margin, (255, 169, 77), centered=True)
         if not rocket.alive or game.won:
@@ -266,6 +272,8 @@ def main():
                         running = False
                     elif event.key == pygame.K_r:
                         game.restart()
+                    else:
+                        game.start()
             if not running:
                 break
             keys = pygame.key.get_pressed()
