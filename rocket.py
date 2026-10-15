@@ -5,7 +5,7 @@ from physics import DRY_MASS, FUEL_MASS, FUEL_PER_FRAME, G, MAX_ANGLE, THRUST, T
 
 
 class Rocket:
-    def __init__(self, x=0.0, y=2500.0):
+    def __init__(self, x=0.0, y=1000.0):
         # Posição (m): x horizontal, y altitude (0 = solo)
         self.x = x
         self.y = y

@@ -9,16 +9,24 @@ from physics import DT, FPS, FUEL_MASS
 from rocket import Rocket
 
 WORLD_HEIGHT = 3000.0  # metros visíveis na tela, antes do deslocamento da câmera
+MAX_ALTITUDE = 10_000.0  # teto e objetivo do voo, em metros
 GROUND_FRACTION = 0.08  # fração da tela ocupada pelo solo
 TEXT = (232, 239, 250)
 MUTED = (157, 179, 206)
 ACCENT = (82, 219, 198)
+FUEL_CELL_AMOUNT = FUEL_MASS * 0.60
+FUEL_CELL_RADIUS = 180.0  # margem de coleta incluindo o tamanho do foguete
+FUEL_CELL_COUNT = 4  # itens próximos da partida
+FUEL_SECTOR_WIDTH = 1200.0
+FUEL_SECTOR_HEIGHT = 900.0
+CAMERA_ROCKET_HEIGHT = 0.65  # mais espaço visível acima do foguete
 
 
 class Game:
     """Score em passos de simulação; o recorde dura enquanto o jogo estiver aberto."""
 
-    def __init__(self):
+    def __init__(self, rng=None):
+        self.rng = rng if rng is not None else random.Random()
         self.best = 0.0
         self.restart()
 
@@ -28,14 +36,74 @@ class Game:
 
     def restart(self):
         self.rocket = Rocket()
+        self.won = False
         self.frames = 0
+        self.fuel_cells = []
+        for altitude in (650, 1350):
+            for side in (-1, 1):
+                self.fuel_cells.append((
+                    side * self.rng.uniform(280, 420),
+                    altitude + self.rng.uniform(-60, 60),
+                ))
+        self.generated_sectors = set()
+        self.highest_y = self.rocket.y
+        self.collected = 0
+        self.extend_fuel_field()
+
+    def extend_fuel_field(self):
+        self.highest_y = max(self.highest_y, self.rocket.y)
+        # Explora setores do mapa nos dois eixos, antes de chegarem à tela.
+        left = math.floor((self.rocket.x - 4500) / FUEL_SECTOR_WIDTH)
+        right = math.floor((self.rocket.x + 4500) / FUEL_SECTOR_WIDTH)
+        bottom = max(0, math.floor((self.rocket.y - 3500) / FUEL_SECTOR_HEIGHT))
+        top = math.floor((self.rocket.y + 3500) / FUEL_SECTOR_HEIGHT)
+        for column in range(left, right + 1):
+            for row in range(bottom, top + 1):
+                sector = (column, row)
+                if sector in self.generated_sectors:
+                    continue
+                self.generated_sectors.add(sector)
+                if self.rng.random() > 0.65:
+                    continue
+                x = (column + self.rng.uniform(0.2, 0.8)) * FUEL_SECTOR_WIDTH
+                y = (row + self.rng.uniform(0.2, 0.8)) * FUEL_SECTOR_HEIGHT
+                # A região inicial tem somente os quatro galões de apoio.
+                if y >= MAX_ALTITUDE or (abs(x) < 900 and 250 < y < 1800):
+                    continue
+                self.fuel_cells.append((x, y))
+        # Descarta itens muito abaixo para limitar o uso de memória em voos longos.
+        floor = self.highest_y - WORLD_HEIGHT * 2
+        self.fuel_cells = [(x, y) for x, y in self.fuel_cells if y >= floor]
 
     def update(self, thrusting=False, turn=0):
-        if self.rocket.alive:
+        if self.rocket.alive and not self.won:
+            old_x, old_y = self.rocket.x, self.rocket.y
             # Atualização com passo fixo Δt = 1/60 s
             self.rocket.update(DT, thrusting, turn)
+            if self.rocket.alive:
+                if self.rocket.y >= MAX_ALTITUDE:
+                    self.rocket.y = MAX_ALTITUDE
+                    self.rocket.vx = self.rocket.vy = 0.0
+                    self.rocket.thrusting = False
+                    self.won = True
+                self.collect_fuel(old_x, old_y)
+                if not self.won:
+                    self.extend_fuel_field()
             self.frames += 1
             self.best = max(self.best, self.elapsed)
+
+    def collect_fuel(self, old_x, old_y):
+        # Distância ao trajeto do frame: não perde galões em alta velocidade.
+        dx, dy = self.rocket.x - old_x, self.rocket.y - old_y
+        length_squared = dx * dx + dy * dy
+        for x, y in self.fuel_cells[:]:
+            t = 0.0 if length_squared == 0 else max(
+                0.0, min(1.0, ((x - old_x) * dx + (y - old_y) * dy) / length_squared)
+            )
+            if math.hypot(x - old_x - t * dx, y - old_y - t * dy) <= FUEL_CELL_RADIUS:
+                self.rocket.fuel = min(FUEL_MASS, self.rocket.fuel + FUEL_CELL_AMOUNT)
+                self.fuel_cells.remove((x, y))
+                self.collected += 1
 
 
 class Renderer:
@@ -72,10 +140,11 @@ class Renderer:
         self.screen.blit(layer, rect)
         pygame.draw.rect(self.screen, (55, 78, 105), rect, 1, border_radius=12)
 
-    def draw_world(self, rocket):
+    def draw_world(self, game):
+        rocket = game.rocket
         # A câmera acompanha x e sobe quando necessário, sem alterar o movimento.
         camera_x = rocket.x
-        camera_y = max(0.0, rocket.y - WORLD_HEIGHT * 0.85)
+        camera_y = max(0.0, rocket.y - WORLD_HEIGHT * CAMERA_ROCKET_HEIGHT)
 
         def to_screen(x, y):
             return int(self.sw / 2 + (x - camera_x) * self.scale), int(self.ground_y - (y - camera_y) * self.scale)
@@ -94,6 +163,17 @@ class Renderer:
                 self.label(f"{x} m", sx, sy - self.small.get_height() - 8, MUTED, self.small, centered=True)
             sx, sy = to_screen(0, 0)
             pygame.draw.rect(self.screen, (113, 130, 144), (sx - 45, sy, 90, 8))
+
+        # Galões fixos no mundo, transformados pela mesma câmera do foguete.
+        for x, y in game.fuel_cells:
+            sx, sy = to_screen(x, y)
+            w, h = max(16, int(22 * self.ui)), max(22, int(30 * self.ui))
+            rect = pygame.Rect(sx - w // 2, sy - h // 2, w, h)
+            if not self.screen.get_rect().colliderect(rect.inflate(8, 12)):
+                continue
+            pygame.draw.rect(self.screen, (255, 219, 91), (rect.centerx - w // 5, rect.top - 5, max(4, w // 3), 6), 2)
+            pygame.draw.rect(self.screen, (255, 219, 91), rect, border_radius=3)
+            pygame.draw.rect(self.screen, (129, 90, 31), rect, 2, border_radius=3)
 
         # Desenho
         px, py = to_screen(rocket.x, rocket.y)  # (px, py) = centro de massa
@@ -125,11 +205,11 @@ class Renderer:
 
     def draw(self, game):
         rocket = game.rocket
-        self.draw_world(rocket)
+        self.draw_world(game)
         margin = int(22 * self.ui)
         row = max(22, int(29 * self.ui))
         width = max(245, int(310 * self.ui))
-        self.panel(pygame.Rect(margin, margin, width, row * 11 + margin))
+        self.panel(pygame.Rect(margin, margin, width, row * 12 + margin))
         x, y = margin * 2, margin * 2
         self.label("TELEMETRIA", x, y, ACCENT, self.small)
         lines = [
@@ -141,19 +221,20 @@ class Renderer:
             f"Vel. horizontal: {rocket.vx:+.1f} m/s",
             f"Massa: {rocket.mass / 1000:.1f} t",
             f"Ângulo: {math.degrees(rocket.angle):+.1f}°",
+            f"Galões coletados: {game.collected}",
         ]
         for i, line in enumerate(lines, 1):
             self.label(line, x, y + i * row)
         ratio = rocket.fuel / FUEL_MASS
-        bar = pygame.Rect(x, y + 9 * row, width - 2 * margin, max(8, int(10 * self.ui)))
+        bar = pygame.Rect(x, y + 10 * row, width - 2 * margin, max(8, int(10 * self.ui)))
         pygame.draw.rect(self.screen, (43, 60, 80), bar, border_radius=4)
         if ratio > 0:
             pygame.draw.rect(self.screen, ACCENT if ratio > .2 else (255, 169, 77), (bar.x, bar.y, int(bar.width * ratio), bar.height), border_radius=4)
         self.label(f"Combustível: {ratio:.1%}  ({rocket.fuel / 1000:.1f} t)", x, bar.bottom + 5, MUTED, self.small)
         self.label("ESPAÇO: propulsão   |   ← →: inclinar   |   R: reiniciar   |   ESC: sair", self.sw // 2, self.sh - max(26, int(35 * self.ui)), TEXT, self.small, centered=True)
-        if rocket.alive and rocket.fuel == 0:
+        if rocket.alive and not game.won and rocket.fuel == 0:
             self.label("Combustível esgotado", self.sw // 2, margin, (255, 169, 77), centered=True)
-        if not rocket.alive:
+        if not rocket.alive or game.won:
             shade = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
             shade.fill((3, 8, 18, 155))
             self.screen.blit(shade, (0, 0))
@@ -161,7 +242,7 @@ class Renderer:
             card.center = (self.sw // 2, self.sh // 2)
             self.panel(card)
             cx = card.centerx
-            self.label("FIM DE VOO", cx, card.top + int(22 * self.ui), font=self.title, centered=True)
+            self.label("10.000 m — VITÓRIA!" if game.won else "FIM DE VOO", cx, card.top + int(22 * self.ui), font=self.title, centered=True)
             self.label(f"Tempo no ar: {game.elapsed:.2f} s", cx, card.top + int(82 * self.ui), ACCENT, centered=True)
             self.label(f"Melhor tempo da sessão: {game.best:.2f} s", cx, card.top + int(119 * self.ui), MUTED, centered=True)
             self.label("R: tentar novamente  •  ESC: sair", cx, card.top + int(175 * self.ui), centered=True)

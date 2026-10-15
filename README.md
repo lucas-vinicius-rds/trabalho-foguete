@@ -45,8 +45,23 @@ do seu interpretador Python, como `python3`, nos comandos acima.
 ## Controles e objetivo
 
 Segure **Espaço** para propulsionar e use **← / →** para inclinar o foguete.
-**R** inicia uma nova tentativa e **Esc** sai. O objetivo é permanecer no ar
-pelo maior tempo possível. O recorde é mantido durante a sessão.
+**R** inicia uma nova tentativa e **Esc** sai. O objetivo é alcançar **10.000 m**
+sem cair, coletando combustível durante o caminho. Ao chegar a essa altitude, o voo termina
+com vitória e o cronômetro para. O recorde de tempo no ar é mantido na sessão.
+
+Quatro galões ficam próximos do ponto de partida. Os demais são espalhados
+pelo mapa em setores de 1200 × 900 m, com 65% de chance de um galão por setor.
+A região inicial é reservada aos quatro galões de apoio para evitar excesso.
+A geração acompanha tanto a subida quanto o movimento lateral, permitindo
+encontrar combustível em voos diagonais. Cada setor é gerado uma única vez
+por partida; voltar a uma região não repõe os itens coletados. Galões mais
+de 6000 m abaixo da maior altitude são descartados.
+Aproxime o foguete para coletá-los: cada galão repõe **60% da capacidade do
+tanque**, até o limite de 100%.
+O painel mostra quantos foram coletados. **R** sorteia novas posições.
+A coleta aceita uma distância de até 180 m do trajeto do foguete, inclusive
+quando ele atravessa um galão em alta velocidade.
+O combustível coletado também aumenta a massa do foguete.
 
 ## Arquivos do projeto
 
@@ -63,7 +78,7 @@ e o melhor tempo da sessão.
 
 ## Física para a apresentação
 
-O foguete começa a 2500 m de altitude, em repouso, com 100 000 kg de massa
+O foguete começa a 1000 m de altitude, em repouso, com 100 000 kg de massa
 seca e 100 000 kg de combustível. As posições são medidas em metros e as
 velocidades em metros por segundo. O eixo y aponta para cima.
 
@@ -113,3 +128,4 @@ py -m unittest -v
 Os testes conferem queda livre, colisão,
 empuxo inicial, consumo até esgotar o combustível, limites de inclinação,
 movimento horizontal, score e reinício.
+Também verificam coleta de galões, limite do tanque e restauração dos itens.

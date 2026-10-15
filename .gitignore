@@ -32,3 +32,6 @@ dist/
 entrega/
 entrega-foguete.zip
 *.spec
+LEIA-ME-ENTREGA.txt
+gerar-executavel.ps1
+requirements-build.txt
